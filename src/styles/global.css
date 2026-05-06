@@ -1,0 +1,109 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; color: #173831; margin: 0; overflow: hidden; }
+
+/* RADIAL gradient background with full palette layers */
+.app-bg {
+  background:
+    radial-gradient(ellipse 90% 70% at 20% 20%, #DBF0DD 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at 85% 15%, #B8DCC2 0%, transparent 50%),
+    radial-gradient(ellipse 75% 65% at 75% 85%, #235347 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 15% 90%, #5C8A75 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #8CB79B 0%, #5C8A75 100%);
+  position: relative;
+}
+.app-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle 380px at 12% 18%, rgba(219,240,221,0.7) 0%, transparent 70%),
+    radial-gradient(circle 320px at 90% 30%, rgba(168,205,179,0.6) 0%, transparent 70%),
+    radial-gradient(circle 420px at 80% 88%, rgba(35,83,71,0.4) 0%, transparent 65%),
+    radial-gradient(circle 280px at 25% 75%, rgba(92,138,117,0.45) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: bgShift 18s ease-in-out infinite alternate;
+}
+@keyframes bgShift {
+  0%   { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: .85; transform: scale(1.08) rotate(2deg); }
+}
+
+/* Glass cards — STRONG contrast so they pop on the radial bg */
+.glass {
+  background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(219,240,221,0.55) 100%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 40px rgba(5, 31, 32, 0.18),
+    0 2px 8px rgba(5, 31, 32, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.glass-light {
+  background: linear-gradient(135deg, rgba(255,255,255,0.75) 0%, rgba(219,240,221,0.6) 100%);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  box-shadow:
+    0 6px 20px rgba(5, 31, 32, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.glass-sidebar {
+  background: linear-gradient(180deg, rgba(255,255,255,0.65) 0%, rgba(219,240,221,0.55) 50%, rgba(168,205,179,0.5) 100%);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 4px 0 32px rgba(5, 31, 32, 0.12);
+}
+.glass-topbar {
+  background: linear-gradient(90deg, rgba(255,255,255,0.65) 0%, rgba(219,240,221,0.55) 100%);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 20px rgba(5, 31, 32, 0.06);
+}
+
+.scrollable { overflow-y: auto; position: relative; z-index: 1; }
+.scrollable > * { flex-shrink: 0; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(35,83,71,0.3); border-radius: 2px; }
+
+/* Glow orb for bg texture */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat 8s ease-in-out infinite alternate;
+}
+@keyframes orbFloat {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.08); }
+}
+
+/* Hover glow on interactive cards */
+.card-hover {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(5,31,32,0.15), 0 0 0 1px rgba(255,255,255,0.7);
+}
+
+/* Shimmer animation for loading */
+@keyframes shimmer { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+/* Gradient text */
+.grad-text {
+  background: linear-gradient(135deg, #051F20 0%, #235347 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
