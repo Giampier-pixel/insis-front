@@ -1,102 +1,110 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { QUIZ_QUESTIONS } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
-import Btn from '@/components/ui/Btn';
+import Spinner from '@/components/ui/Spinner';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import api from '@/lib/api';
 
 export default function QuizPlayer() {
+  const { data, loading } = useApi('/quizzes/');
+  const quizzes = data?.results || data || [];
+  const [selected, setSelected] = useState(null);
+  const [attempt, setAttempt] = useState(null);
   const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900);
+  const [answers, setAnswers] = useState({});
+  const [result, setResult] = useState(null);
+  const [starting, setStarting] = useState(false);
 
-  useEffect(() => {
-    if (submitted) return;
-    const t = setInterval(() => setTimeLeft(t => t > 0 ? t - 1 : 0), 1000);
-    return () => clearInterval(t);
-  }, [submitted]);
+  const startQuiz = async (quiz) => {
+    setStarting(true);
+    try {
+      const { data } = await api.post(`/quizzes/${quiz.id}/start/`);
+      setSelected(quiz); setAttempt(data); setCurrent(0); setAnswers({}); setResult(null);
+    } catch (e) { alert(e?.response?.data?.detail || 'Error al iniciar quiz'); }
+    finally { setStarting(false); }
+  };
 
-  const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  const q = QUIZ_QUESTIONS[current];
+  const submitQuiz = async () => {
+    try {
+      const payload = { answers: Object.entries(answers).map(([qid, oid]) => ({ question: parseInt(qid), selected_option: oid })) };
+      const { data } = await api.post(`/quizzes/${selected.id}/submit/`, { attempt_id: attempt.id, ...payload });
+      setResult(data);
+    } catch (e) { alert(e?.response?.data?.detail || 'Error al enviar'); }
+  };
 
-  if (submitted) {
-    const score = QUIZ_QUESTIONS.filter((_, i) => selected[i] === QUIZ_QUESTIONS[i].correct).length;
-    const pct = Math.round(score / QUIZ_QUESTIONS.length * 100);
-    const pass = pct >= 70;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>;
+
+  if (result) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '40px 48px', maxWidth: 420, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, fontWeight: 800, color: result.passed ? C.success : C.danger, marginBottom: 8 }}>{result.score}%</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.t1, marginBottom: 6 }}>{result.passed ? '¡Aprobado!' : 'No aprobado'}</div>
+        <div style={{ fontSize: 13, color: C.t3, marginBottom: 24 }}>{result.correct_answers}/{result.total_questions} respuestas correctas</div>
+        <Button onClick={() => { setSelected(null); setResult(null); }}>Volver a quizzes</Button>
+      </div>
+    </div>
+  );
+
+  if (selected && attempt) {
+    const questions = attempt.questions || [];
+    const q = questions[current];
     return (
-      <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <GlassCard style={{ padding: '44px 52px', maxWidth: 440, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: 52, fontWeight: 800, color: pass ? C.teal : C.red, marginBottom: 6, letterSpacing: '-0.03em' }}>{pct}%</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.t1, marginBottom: 6 }}>{pass ? '¡Aprobado!' : 'No aprobado'}</div>
-          <div style={{ fontSize: 12, color: C.t2, marginBottom: 28 }}>Respondiste correctamente {score}/{QUIZ_QUESTIONS.length}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
-            {QUIZ_QUESTIONS.map((qq, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'rgba(5,31,32,0.4)', borderRadius: 9, padding: '10px 14px', textAlign: 'left', border: `1px solid ${selected[i] === qq.correct ? C.teal + '30' : C.red + '30'}` }}>
-                <span style={{ color: selected[i] === qq.correct ? C.teal : C.red, flexShrink: 0, marginTop: 1, fontSize: 14 }}>{selected[i] === qq.correct ? '✓' : '✗'}</span>
-                <div>
-                  <div style={{ fontSize: 12, color: C.t1, marginBottom: 2 }}>{qq.text.slice(0, 60)}…</div>
-                  <div style={{ fontSize: 10, color: C.t3 }}>Correcta: {qq.options[qq.correct]}</div>
-                </div>
-              </div>
-            ))}
+      <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 12, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{selected.title}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1 }}>Pregunta {current + 1} de {questions.length}</div>
           </div>
-          <Btn onClick={() => { setSubmitted(false); setCurrent(0); setSelected({}); setTimeLeft(900); }}>Reintentar</Btn>
-        </GlassCard>
+          <Button variant="ghost" size="sm" onClick={() => { setSelected(null); setAttempt(null); }}>Cancelar</Button>
+        </div>
+        {/* Navigator */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {questions.map((_, i) => (
+            <button key={i} onClick={() => setCurrent(i)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${answers[questions[i]?.id] ? C.accent : i === current ? C.t2 : '#E2E8F0'}`, background: answers[questions[i]?.id] ? C.accentLight : i === current ? '#F8FAFC' : '#fff', color: C.t1, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{i + 1}</button>
+          ))}
+        </div>
+        {q && (
+          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '24px' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: C.t1, lineHeight: 1.55, marginBottom: 20 }}>{q.text}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {q.options?.map(opt => {
+                const sel = answers[q.id] === opt.id;
+                return (
+                  <button key={opt.id} onClick={() => setAnswers({ ...answers, [q.id]: opt.id })} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, border: `1.5px solid ${sel ? C.accent : '#E2E8F0'}`, background: sel ? C.accentLight : '#fff', color: sel ? C.accent : C.t2, cursor: 'pointer', textAlign: 'left', fontSize: 13, transition: 'all .15s' }}>
+                    <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, border: `2px solid ${sel ? C.accent : '#CBD5E1'}`, background: sel ? C.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {sel && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff', display: 'block' }} />}
+                    </span>
+                    {opt.text}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Button variant="ghost" onClick={() => setCurrent(Math.max(0, current - 1))}>← Anterior</Button>
+          {current < questions.length - 1
+            ? <Button onClick={() => setCurrent(current + 1)}>Siguiente →</Button>
+            : <Button onClick={submitQuiz} style={{ background: C.success }}>Enviar quiz</Button>}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 720, margin: '0 auto', width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontSize: 10, color: C.t3, letterSpacing: '0.07em', textTransform: 'uppercase' }}>Liderazgo de Equipos</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.t1 }}>Quiz Final</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h2 style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Quizzes disponibles</h2>
+      {quizzes.length === 0 ? <EmptyState title="Sin quizzes" message="No hay quizzes disponibles en este momento." /> : quizzes.map(q => (
+        <div key={q.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.t1 }}>{q.title}</div>
+            <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>{q.question_count || 0} preguntas · {q.time_limit ? `${q.time_limit} min` : 'Sin límite'} · Mín. {q.passing_score}% para aprobar</div>
+          </div>
+          <Button size="sm" onClick={() => startQuiz(q)} disabled={starting}>{starting ? '…' : 'Iniciar'}</Button>
         </div>
-        <div style={{ padding: '8px 18px', borderRadius: 9, background: timeLeft < 120 ? 'rgba(240,120,120,0.15)' : 'rgba(5,31,32,0.55)', border: `1px solid ${timeLeft < 120 ? C.red + '50' : C.b1}`, color: timeLeft < 120 ? C.red : C.t1, fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 700, backdropFilter: 'blur(8px)', boxShadow: timeLeft < 120 ? `0 0 20px ${C.red}30` : '' }}>
-          {fmt(timeLeft)}
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {QUIZ_QUESTIONS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${selected[i] !== undefined ? C.accent + '80' : i === current ? C.b2 : C.b1}`, background: selected[i] !== undefined ? 'rgba(140,183,155,0.2)' : i === current ? 'rgba(140,183,155,0.08)' : 'transparent', color: selected[i] !== undefined ? C.accentL : i === current ? C.t1 : C.t3, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all .15s', boxShadow: selected[i] !== undefined ? `0 0 10px ${C.accent}30` : '' }}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
-      <GlassCard style={{ padding: '26px' }}>
-        <div style={{ fontSize: 10, color: C.t3, marginBottom: 10, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Pregunta {current + 1} de {QUIZ_QUESTIONS.length}</div>
-        <div style={{ fontSize: 16, fontWeight: 600, color: C.t1, lineHeight: 1.55, marginBottom: 22 }}>{q.text}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-          {q.options.map((opt, i) => {
-            const sel = selected[current] === i;
-            return (
-              <button
-                key={i}
-                onClick={() => setSelected({ ...selected, [current]: i })}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, border: `1.5px solid ${sel ? C.accent + '80' : C.b1}`, background: sel ? 'rgba(140,183,155,0.15)' : 'rgba(5,31,32,0.35)', color: sel ? C.accentL : C.t2, cursor: 'pointer', textAlign: 'left', transition: 'all .18s', fontSize: 13, fontFamily: 'DM Sans', boxShadow: sel ? `0 0 16px ${C.accent}20` : '' }}
-              >
-                <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, border: `2px solid ${sel ? C.accent : C.b2}`, background: sel ? C.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .18s', boxShadow: sel ? `0 0 10px ${C.accent}80` : '' }}>
-                  {sel && <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.g0, display: 'block' }} />}
-                </span>
-                {opt}
-              </button>
-            );
-          })}
-        </div>
-      </GlassCard>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Btn variant="ghost" onClick={() => setCurrent(Math.max(0, current - 1))}>← Anterior</Btn>
-        {current < QUIZ_QUESTIONS.length - 1
-          ? <Btn onClick={() => setCurrent(current + 1)}>Siguiente →</Btn>
-          : <Btn style={{ background: `linear-gradient(135deg,${C.teal}cc,${C.teal})`, color: C.g0 }} onClick={() => setSubmitted(true)}>Enviar quiz</Btn>
-        }
-      </div>
+      ))}
     </div>
   );
 }

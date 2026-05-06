@@ -1,72 +1,84 @@
 'use client';
 import { useState } from 'react';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { ASSIGNMENTS, COURSES } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
-import Badge from '@/components/ui/Badge';
-import ProgressBar from '@/components/ui/ProgressBar';
-import Btn from '@/components/ui/Btn';
+import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
-import SelectField from '@/components/ui/SelectField';
+import Select from '@/components/ui/Select';
+import Badge from '@/components/ui/Badge';
+import ProgressBar from '@/components/ui/ProgressBar';
+import Spinner from '@/components/ui/Spinner';
+import EmptyState from '@/components/ui/EmptyState';
+import api from '@/lib/api';
 
-export default function HRAssignments() {
-  const [assignments, setAssignments] = useState(ASSIGNMENTS);
+export default function Assignments() {
+  const { data, loading, refetch } = useApi('/assignments/');
+  const { data: courses } = useApi('/courses/');
+  const assignments = data?.results || data || [];
+  const courseList = courses?.results || courses || [];
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ title: '', course: COURSES[0].title, dept: 'Todos', deadline: '' });
+  const [form, setForm] = useState({ title: '', course: '', scope: 'COMPANY', deadline: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const add = () => {
-    if (!form.title) return;
-    setAssignments([...assignments, { ...form, id: Date.now(), targets: 0, done: 0, pct: 0, status: 'active' }]);
-    setShowModal(false);
-    setForm({ title: '', course: COURSES[0].title, dept: 'Todos', deadline: '' });
+  const save = async () => {
+    if (!form.title || !form.course) { setError('Título y curso son requeridos.'); return; }
+    setSaving(true); setError('');
+    try {
+      await api.post('/assignments/', form);
+      setShowModal(false); setForm({ title: '', course: '', scope: 'COMPANY', deadline: '' }); refetch();
+    } catch (e) { setError(e?.response?.data?.detail || 'Error al crear asignación.'); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 12, color: C.t3 }}>{assignments.length} asignaciones</div>
-        <Btn onClick={() => setShowModal(true)}>+ Nueva</Btn>
+        <div style={{ fontSize: 13, color: C.t3 }}><span style={{ fontWeight: 600, color: C.t1 }}>{assignments.length}</span> asignaciones</div>
+        <Button onClick={() => setShowModal(true)}>+ Nueva asignación</Button>
       </div>
-      {assignments.map(a => (
-        <GlassCard key={a.id} className="glass card-hover" style={{ padding: '20px 22px', border: `1px solid ${a.status === 'overdue' ? C.red + '40' : C.b1}`, boxShadow: a.status === 'overdue' ? `0 0 20px ${C.red}15` : '' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
+      ) : assignments.length === 0 ? (
+        <EmptyState title="Sin asignaciones" message="Crea tu primera asignación de cursos para empleados." action={<Button onClick={() => setShowModal(true)}>+ Nueva asignación</Button>} />
+      ) : assignments.map(a => (
+        <div key={a.id} style={{ background: '#fff', border: `1px solid ${a.status === 'OVERDUE' ? '#FECACA' : '#E2E8F0'}`, borderRadius: 12, padding: '20px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.t1 }}>{a.title}</div>
-                <Badge label={a.status === 'overdue' ? 'Vencido' : 'Activo'} color={a.status === 'overdue' ? C.red : C.teal} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{a.title}</div>
+                <Badge label={a.status === 'OVERDUE' ? 'Vencido' : 'Activo'} variant={a.status === 'OVERDUE' ? 'danger' : 'success'} />
               </div>
-              <div style={{ fontSize: 11, color: C.t3 }}>{a.course} · {a.dept}</div>
+              <div style={{ fontSize: 12, color: C.t3 }}>{a.course_title || a.course} · Alcance: {a.scope}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: C.t3, marginBottom: 2 }}>Fecha límite</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: a.status === 'overdue' ? C.red : C.t1 }}>{a.deadline}</div>
+              <div style={{ fontSize: 11, color: C.t3, marginBottom: 2 }}>Fecha límite</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: a.status === 'OVERDUE' ? C.danger : C.t1 }}>{a.deadline || '—'}</div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-            <ProgressBar pct={a.pct} color={a.pct >= 70 ? C.teal : a.pct >= 40 ? C.accent : C.red} height={6} glow />
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, flexShrink: 0 }}>{a.pct}%</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 11, color: C.t3 }}>{a.done} / {a.targets} completaron</div>
+          <ProgressBar pct={a.completion_pct || 0} color={a.completion_pct >= 70 ? C.success : a.completion_pct >= 40 ? C.warning : C.danger} showLabel />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: C.t3 }}>{a.completed_targets || 0} / {a.total_targets || 0} completaron</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <Btn variant="ghost" style={{ fontSize: 11, padding: '5px 11px' }}>Detalle</Btn>
-              <Btn variant="ghost" style={{ fontSize: 11, padding: '5px 11px' }}>Asignar dpto.</Btn>
+              <Button variant="ghost" size="sm">Ver detalle</Button>
+              <Button variant="ghost" size="sm">Asignar departamento</Button>
             </div>
           </div>
-        </GlassCard>
+        </div>
       ))}
+
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nueva asignación">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Inducción Q3 2025" />
-          <SelectField label="Curso" value={form.course} onChange={v => setForm({ ...form, course: v })} options={COURSES.map(c => ({ value: c.title, label: c.title }))} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <SelectField label="Departamento" value={form.dept} onChange={v => setForm({ ...form, dept: v })} options={['Todos', 'Operaciones', 'Ventas', 'RR.HH.', 'Finanzas', 'TI', 'Legal']} />
-            <Input label="Fecha límite" value={form.deadline} onChange={v => setForm({ ...form, deadline: v })} placeholder="31 Jul 2025" />
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-            <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Btn>
-            <Btn onClick={add}>Crear</Btn>
+          <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Inducción Q3 2025" required />
+          <Select label="Curso" value={form.course} onChange={v => setForm({ ...form, course: v })} options={[{ value: '', label: 'Seleccionar curso…' }, ...courseList.map(c => ({ value: c.id, label: c.title }))]} />
+          <Select label="Alcance" value={form.scope} onChange={v => setForm({ ...form, scope: v })} options={[{ value: 'COMPANY', label: 'Toda la empresa' }, { value: 'DEPARTMENT', label: 'Departamento' }, { value: 'INDIVIDUAL', label: 'Individual' }]} />
+          <Input label="Fecha límite" value={form.deadline} onChange={v => setForm({ ...form, deadline: v })} type="date" />
+          {error && <div style={{ fontSize: 12, color: C.danger, background: '#FEF2F2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Crear'}</Button>
           </div>
         </div>
       </Modal>

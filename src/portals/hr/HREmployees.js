@@ -1,99 +1,98 @@
 'use client';
 import { useState } from 'react';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { EMPLOYEES } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
-import Badge from '@/components/ui/Badge';
-import ProgressBar from '@/components/ui/ProgressBar';
-import Avatar from '@/components/ui/Avatar';
-import Btn from '@/components/ui/Btn';
+import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
-import SelectField from '@/components/ui/SelectField';
+import Select from '@/components/ui/Select';
+import Badge from '@/components/ui/Badge';
+import Avatar from '@/components/ui/Avatar';
+import ProgressBar from '@/components/ui/ProgressBar';
+import Spinner from '@/components/ui/Spinner';
+import api from '@/lib/api';
 
-export default function HREmployees() {
+export default function Employees() {
+  const { data, loading, refetch } = useApi('/employees/');
+  const employees = data?.results || data || [];
   const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
-  const [newEmp, setNewEmp] = useState({ name: '', email: '', dept: 'Operaciones', role: '' });
-  const [employees, setEmployees] = useState(EMPLOYEES);
-  const depts = ['Todos', ...[...new Set(EMPLOYEES.map(e => e.dept))]];
+  const [form, setForm] = useState({ full_name: '', email: '', department: '', role: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
   const filtered = employees.filter(e =>
-    (deptFilter === 'Todos' || e.dept === deptFilter) &&
-    (e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
+    e.user?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    e.user?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const addEmp = () => {
-    if (!newEmp.name || !newEmp.email) return;
-    setEmployees([...employees, { ...newEmp, id: employees.length + 1, completed: 0, assigned: 0, pct: 0, status: 'ok' }]);
-    setShowModal(false);
-    setNewEmp({ name: '', email: '', dept: 'Operaciones', role: '' });
+  const save = async () => {
+    if (!form.full_name || !form.email) { setError('Nombre y email son requeridos.'); return; }
+    setSaving(true); setError('');
+    try {
+      await api.post('/employees/', form);
+      setShowModal(false); setForm({ full_name: '', email: '', department: '', role: '' }); refetch();
+    } catch (e) { setError(e?.response?.data?.detail || JSON.stringify(e?.response?.data) || 'Error al crear empleado.'); }
+    finally { setSaving(false); }
   };
 
-  const statusColor = s => s === 'done' ? C.teal : s === 'ok' ? C.accent : s === 'warn' ? C.amber : C.red;
-  const statusLabel = s => s === 'done' ? 'OK' : s === 'ok' ? 'Activo' : s === 'warn' ? 'Alerta' : 'Riesgo';
+  const statusBadge = (pct) => {
+    if (pct >= 80) return { label: 'Al día', variant: 'success' };
+    if (pct >= 40) return { label: 'En riesgo', variant: 'warning' };
+    return { label: 'Crítico', variant: 'danger' };
+  };
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(5,31,32,0.5)', border: `1px solid ${C.b1}`, borderRadius: 8, padding: '8px 14px', backdropFilter: 'blur(8px)' }}>
-          <span style={{ color: C.t3 }}>⌕</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Nombre o email…"
-            aria-label="Buscar empleado"
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: C.t1, fontSize: 13, fontFamily: 'DM Sans' }}
-          />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 14px' }}>
+          <span style={{ color: C.t3 }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o email…" style={{ flex: 1, border: 'none', fontSize: 13, color: C.t1, background: 'none', outline: 'none' }} />
         </div>
-        <SelectField label="" value={deptFilter} onChange={setDeptFilter} options={depts} />
-        <Btn onClick={() => setShowModal(true)}>+ Nuevo</Btn>
-        <Btn variant="ghost">Importar CSV</Btn>
+        <Button onClick={() => setShowModal(true)}>+ Nuevo empleado</Button>
       </div>
-      <GlassCard style={{ overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 140px 60px 80px' }}>
-          {['Empleado', 'Dpto.', 'Rol', 'Progreso', 'Cursos', 'Estado'].map(h => (
-            <div key={h} style={{ padding: '10px 16px', fontSize: 10, color: C.t3, letterSpacing: '0.07em', textTransform: 'uppercase', borderBottom: `1px solid ${C.b3}` }}>{h}</div>
+
+      <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 160px 100px' }}>
+          {['Empleado', 'Departamento', 'Cargo', 'Progreso', 'Estado'].map(h => (
+            <div key={h} style={{ padding: '11px 16px', fontSize: 11, color: C.t3, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #F1F5F9' }}>{h}</div>
           ))}
         </div>
-        {filtered.map(e => (
-          <div
-            key={e.id}
-            style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 140px 60px 80px', borderBottom: `1px solid ${C.b3}`, transition: 'background .15s', cursor: 'pointer' }}
-            onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(140,183,155,0.06)'}
-            onMouseLeave={ev => ev.currentTarget.style.background = 'transparent'}
-          >
-            <div style={{ padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar name={e.name} size={28} color={statusColor(e.status)} />
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{e.name}</div>
-                <div style={{ fontSize: 10, color: C.t3 }}>{e.email}</div>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
+        ) : filtered.map(e => {
+          const pct = e.completion_pct || 0;
+          const badge = statusBadge(pct);
+          return (
+            <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 160px 100px', borderBottom: '1px solid #F1F5F9', transition: 'background .12s', cursor: 'default' }}
+              onMouseEnter={ev => ev.currentTarget.style.background = '#FAFAFA'}
+              onMouseLeave={ev => ev.currentTarget.style.background = '#fff'}>
+              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar name={e.user?.full_name || e.user?.email || '?'} size={30} color={C.accent} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{e.user?.full_name}</div>
+                  <div style={{ fontSize: 11, color: C.t3 }}>{e.user?.email}</div>
+                </div>
               </div>
+              <div style={{ padding: '12px 16px', fontSize: 13, color: C.t2, display: 'flex', alignItems: 'center' }}>{e.department?.name || '—'}</div>
+              <div style={{ padding: '12px 16px', fontSize: 13, color: C.t2, display: 'flex', alignItems: 'center' }}>{e.job_title || '—'}</div>
+              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}><ProgressBar pct={pct} color={pct >= 80 ? C.success : pct >= 40 ? C.warning : C.danger} showLabel /></div>
+              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}><Badge label={badge.label} variant={badge.variant} /></div>
             </div>
-            <div style={{ padding: '11px 16px', fontSize: 12, color: C.t2, display: 'flex', alignItems: 'center' }}>{e.dept}</div>
-            <div style={{ padding: '11px 16px', fontSize: 12, color: C.t2, display: 'flex', alignItems: 'center' }}>{e.role}</div>
-            <div style={{ padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ProgressBar pct={e.pct} color={e.pct >= 80 ? C.teal : e.pct >= 40 ? C.accent : C.red} height={4} glow />
-              <span style={{ fontSize: 10, color: C.t3, flexShrink: 0, width: 26 }}>{e.pct}%</span>
-            </div>
-            <div style={{ padding: '11px 16px', fontSize: 12, color: C.t1, display: 'flex', alignItems: 'center' }}>{e.completed}/{e.assigned || '—'}</div>
-            <div style={{ padding: '11px 16px', display: 'flex', alignItems: 'center' }}>
-              <Badge label={statusLabel(e.status)} color={statusColor(e.status)} />
-            </div>
-          </div>
-        ))}
-      </GlassCard>
+          );
+        })}
+      </div>
+
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nuevo empleado">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Nombre completo" value={newEmp.name} onChange={v => setNewEmp({ ...newEmp, name: v })} placeholder="Ana García" />
-          <Input label="Email" value={newEmp.email} onChange={v => setNewEmp({ ...newEmp, email: v })} placeholder="ana@empresa.com" type="email" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <SelectField label="Departamento" value={newEmp.dept} onChange={v => setNewEmp({ ...newEmp, dept: v })} options={['Operaciones', 'Ventas', 'RR.HH.', 'Finanzas', 'TI', 'Legal']} />
-            <Input label="Cargo" value={newEmp.role} onChange={v => setNewEmp({ ...newEmp, role: v })} placeholder="Analista Jr." />
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-            <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Btn>
-            <Btn onClick={addEmp}>Crear empleado</Btn>
+          <Input label="Nombre completo" value={form.full_name} onChange={v => setForm({ ...form, full_name: v })} placeholder="Ana García" required />
+          <Input label="Email" value={form.email} onChange={v => setForm({ ...form, email: v })} type="email" placeholder="ana@empresa.com" required />
+          <Input label="Departamento" value={form.department} onChange={v => setForm({ ...form, department: v })} placeholder="Operaciones" />
+          <Input label="Cargo" value={form.role} onChange={v => setForm({ ...form, role: v })} placeholder="Analista Jr." />
+          {error && <div style={{ fontSize: 12, color: C.danger, background: '#FEF2F2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Crear empleado'}</Button>
           </div>
         </div>
       </Modal>

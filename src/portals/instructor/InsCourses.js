@@ -1,68 +1,79 @@
 'use client';
 import { useState } from 'react';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { COURSES } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
-import Badge from '@/components/ui/Badge';
-import Btn from '@/components/ui/Btn';
+import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
-import SelectField from '@/components/ui/SelectField';
+import Select from '@/components/ui/Select';
+import Badge from '@/components/ui/Badge';
+import Spinner from '@/components/ui/Spinner';
+import EmptyState from '@/components/ui/EmptyState';
 import LessonEditor from './LessonEditor';
+import api from '@/lib/api';
 
-export default function InsCourses({ onNav }) {
-  const [courses, setCourses] = useState(COURSES.slice(0, 4));
+export default function InsCourses() {
+  const { data, loading, refetch } = useApi('/courses/?instructor=me');
+  const courses = data?.results || data || [];
   const [showModal, setShowModal] = useState(false);
   const [editCourse, setEditCourse] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [form, setForm] = useState({ title: '', category: 'Management', level: 'Intermedio', duration: '' });
+  const [form, setForm] = useState({ title: '', category: '', level: 'INTERMEDIATE', duration: '' });
+  const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     if (!form.title) return;
-    if (editCourse) {
-      setCourses(courses.map(c => c.id === editCourse.id ? { ...c, ...form } : c));
-    } else {
-      setCourses([...courses, { ...form, id: Date.now(), enrolled: 0, rating: 0, progress: 0, lessons: 0, published: false, instructor: 'Carlos Mendoza' }]);
-    }
-    setShowModal(false);
-    setEditCourse(null);
-    setForm({ title: '', category: 'Management', level: 'Intermedio', duration: '' });
+    setSaving(true);
+    try {
+      if (editCourse) await api.patch(`/courses/${editCourse.id}/`, form);
+      else await api.post('/courses/', form);
+      setShowModal(false); setEditCourse(null); setForm({ title: '', category: '', level: 'INTERMEDIATE', duration: '' }); refetch();
+    } catch (e) { alert(e?.response?.data?.detail || 'Error al guardar.'); }
+    finally { setSaving(false); }
+  };
+
+  const deleteCourse = async (id) => {
+    if (!confirm('¿Eliminar este curso?')) return;
+    try { await api.delete(`/courses/${id}/`); refetch(); } catch { alert('Error al eliminar.'); }
   };
 
   if (selectedCourse) return <LessonEditor course={selectedCourse} onBack={() => setSelectedCourse(null)} />;
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 12, color: C.t3 }}>{courses.length} cursos</div>
-        <Btn onClick={() => { setEditCourse(null); setForm({ title: '', category: 'Management', level: 'Intermedio', duration: '' }); setShowModal(true); }}>+ Nuevo curso</Btn>
+        <div style={{ fontSize: 13, color: C.t3 }}><span style={{ fontWeight: 600, color: C.t1 }}>{courses.length}</span> cursos</div>
+        <Button onClick={() => { setEditCourse(null); setForm({ title: '', category: '', level: 'INTERMEDIATE', duration: '' }); setShowModal(true); }}>+ Nuevo curso</Button>
       </div>
-      {courses.map(c => (
-        <GlassCard key={c.id} className="glass card-hover" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.published ? C.teal : C.amber, flexShrink: 0, boxShadow: `0 0 8px ${c.published ? C.teal : C.amber}` }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 3 }}>{c.title}</div>
-            <div style={{ fontSize: 11, color: C.t3 }}>{c.category} · {c.level} · {c.lessons} lecciones · {c.enrolled.toLocaleString()} inscritos</div>
+
+      {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
+        : courses.length === 0 ? <EmptyState title="Sin cursos" message="Crea tu primer curso." action={<Button onClick={() => setShowModal(true)}>+ Nuevo curso</Button>} />
+        : courses.map(c => (
+          <div key={c.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.is_published ? C.success : C.warning, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 2 }}>{c.title}</div>
+              <div style={{ fontSize: 11, color: C.t3 }}>{c.level} · {c.lesson_count || 0} lecciones · {(c.enrolled_count || 0).toLocaleString()} inscritos</div>
+            </div>
+            <Badge label={c.is_published ? 'Publicado' : 'Borrador'} variant={c.is_published ? 'success' : 'warning'} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCourse(c)}>Lecciones</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setEditCourse(c); setForm({ title: c.title, category: c.category?.id || '', level: c.level, duration: c.duration || '' }); setShowModal(true); }}>Editar</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteCourse(c.id)}>×</Button>
+            </div>
           </div>
-          <Badge label={c.published ? 'Publicado' : 'Borrador'} color={c.published ? C.teal : C.amber} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <Btn variant="ghost" style={{ fontSize: 11, padding: '5px 11px' }} onClick={() => setSelectedCourse(c)}>Lecciones</Btn>
-            <Btn variant="ghost" style={{ fontSize: 11, padding: '5px 11px' }} onClick={() => { setEditCourse(c); setForm({ title: c.title, category: c.category, level: c.level, duration: c.duration }); setShowModal(true); }}>Editar</Btn>
-            <Btn variant="danger" style={{ fontSize: 11, padding: '5px 11px' }} onClick={() => setCourses(courses.filter(x => x.id !== c.id))}>×</Btn>
-          </div>
-        </GlassCard>
-      ))}
+        ))}
+
       <Modal open={showModal} onClose={() => { setShowModal(false); setEditCourse(null); }} title={editCourse ? 'Editar curso' : 'Nuevo curso'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Nombre del curso" />
+          <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Nombre del curso" required />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <SelectField label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={['Management', 'Herramientas', 'Habilidades', 'Compliance', 'Análisis']} />
-            <SelectField label="Nivel" value={form.level} onChange={v => setForm({ ...form, level: v })} options={['Básico', 'Intermedio', 'Avanzado']} />
+            <Select label="Nivel" value={form.level} onChange={v => setForm({ ...form, level: v })} options={[{ value: 'BEGINNER', label: 'Básico' }, { value: 'INTERMEDIATE', label: 'Intermedio' }, { value: 'ADVANCED', label: 'Avanzado' }]} />
+            <Input label="Duración" value={form.duration} onChange={v => setForm({ ...form, duration: v })} placeholder="5h 30m" />
           </div>
-          <Input label="Duración" value={form.duration} onChange={v => setForm({ ...form, duration: v })} placeholder="5h 30m" />
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-            <Btn variant="ghost" onClick={() => { setShowModal(false); setEditCourse(null); }}>Cancelar</Btn>
-            <Btn onClick={save}>{editCourse ? 'Guardar' : 'Crear'}</Btn>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+            <Button variant="ghost" onClick={() => { setShowModal(false); setEditCourse(null); }}>Cancelar</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Guardando…' : editCourse ? 'Guardar' : 'Crear'}</Button>
           </div>
         </div>
       </Modal>

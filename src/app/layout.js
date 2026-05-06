@@ -1,16 +1,10 @@
-import { DM_Sans, DM_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import '@/styles/global.css';
 
-const dmSans = DM_Sans({
+const inter = Inter({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-dm-sans',
-});
-
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-dm-mono',
+  variable: '--font-inter',
 });
 
 export const metadata = {
@@ -21,10 +15,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body
-        className={`${dmSans.variable} ${dmMono.variable}`}
-        style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif' }}
-      >
+      <body className={inter.variable}>
         {children}
       </body>
     </html>

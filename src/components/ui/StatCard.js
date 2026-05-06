@@ -1,14 +1,12 @@
 'use client';
 import { C } from '@/lib/palette';
-import GlassCard from './GlassCard';
-
 export default function StatCard({ label, value, sub, color = C.accent }) {
   return (
-    <GlassCard hoverable style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ width: 28, height: 3, borderRadius: 2, background: `linear-gradient(90deg, ${color}, ${color}66)`, marginBottom: 4, boxShadow: `0 0 8px ${color}88` }} />
-      <div style={{ fontSize: 11, color: C.t2, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 30, fontWeight: 700, color: C.t1, letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: C.t3 }}>{sub}</div>}
-    </GlassCard>
+    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: '18px 22px' }}>
+      <div style={{ width: 24, height: 3, borderRadius: 2, background: color, marginBottom: 10 }} />
+      <div style={{ fontSize: 11, color: C.t3, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>{sub}</div>}
+    </div>
   );
 }

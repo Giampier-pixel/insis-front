@@ -1,50 +1,41 @@
 'use client';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { COURSES } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
-import Badge from '@/components/ui/Badge';
-import ProgressBar from '@/components/ui/ProgressBar';
 import StatCard from '@/components/ui/StatCard';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
 
 export default function InsDashboard({ onNav }) {
-  const myCourses = COURSES.filter(c => c.instructor === 'Carlos Mendoza');
+  const { data, loading } = useApi('/courses/?instructor=me');
+  const courses = data?.results || data || [];
+  const published = courses.filter(c => c.is_published);
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-        <StatCard label="Mis cursos" value="2" color={C.accent} />
-        <StatCard label="Estudiantes" value="3.820" color={C.sky} />
-        <StatCard label="Rating" value="4.9 ★" color={C.amber} />
-        <StatCard label="Reseñas" value="312" color={C.teal} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <StatCard label="Mis cursos"    value={courses.length}  color={C.accent} />
+        <StatCard label="Publicados"    value={published.length} color={C.success} />
+        <StatCard label="Estudiantes"   value={courses.reduce((a, c) => a + (c.enrolled_count || 0), 0).toLocaleString()} color={C.info} />
+        <StatCard label="Rating prom."  value={courses.length ? (courses.reduce((a, c) => a + (c.avg_rating || 0), 0) / courses.length).toFixed(1) + ' ★' : '—'} color={C.warning} />
       </div>
+
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>Mis cursos</div>
-          <button onClick={() => onNav('ins-courses')} style={{ background: 'none', border: 'none', color: C.accent, fontSize: 12, cursor: 'pointer', fontFamily: 'DM Sans' }}>Gestionar →</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Mis cursos</h2>
+          <Button variant="ghost" size="sm" onClick={() => onNav('ins-courses')}>Gestionar →</Button>
         </div>
-        {myCourses.map(c => (
-          <GlassCard key={c.id} className="glass-light card-hover" style={{ padding: '14px 18px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 14 }}>
+        {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div> : courses.slice(0, 5).map(c => (
+          <div key={c.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 20px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 2 }}>{c.title}</div>
-              <div style={{ fontSize: 11, color: C.t3 }}>{c.lessons} lecciones · {c.enrolled.toLocaleString()} inscritos</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 3 }}>{c.title}</div>
+              <div style={{ fontSize: 11, color: C.t3 }}>{c.lesson_count || 0} lecciones · {(c.enrolled_count || 0).toLocaleString()} inscritos</div>
             </div>
-            <Badge label={c.published ? 'Publicado' : 'Borrador'} color={c.published ? C.teal : C.amber} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.amber }}>★ {c.rating}</span>
-          </GlassCard>
+            <Badge label={c.is_published ? 'Publicado' : 'Borrador'} variant={c.is_published ? 'success' : 'warning'} />
+            <span style={{ fontSize: 12, color: C.warning, fontWeight: 600 }}>★ {c.avg_rating?.toFixed(1) || '—'}</span>
+          </div>
         ))}
       </div>
-      <GlassCard style={{ padding: '20px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 16 }}>Rendimiento de quizzes</div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          {[{ label: 'Aprobados', val: 24, pct: 80, color: C.teal }, { label: 'Reprobados', val: 6, pct: 20, color: C.red }, { label: 'Score prom.', val: '78%', pct: 78, color: C.accent }].map(s => (
-            <GlassCard key={s.label} className="glass-light" style={{ flex: 1, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: C.t3, marginBottom: 6 }}>{s.label}</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: s.color, marginBottom: 10, letterSpacing: '-0.02em' }}>{s.val}</div>
-              <ProgressBar pct={s.pct} color={s.color} height={3} glow />
-            </GlassCard>
-          ))}
-        </div>
-      </GlassCard>
     </div>
   );
 }

@@ -1,73 +1,76 @@
 'use client';
 import { useState } from 'react';
+import { useApi } from '@/hooks/useApi';
 import { C } from '@/lib/palette';
-import { COURSES } from '@/lib/mock';
-import GlassCard from '@/components/ui/GlassCard';
 import Badge from '@/components/ui/Badge';
-import ProgressBar from '@/components/ui/ProgressBar';
-import Btn from '@/components/ui/Btn';
+import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
+import api from '@/lib/api';
 
-export default function CourseCatalog({ onNav }) {
+export default function CourseCatalog() {
   const [search, setSearch] = useState('');
-  const [cat, setCat] = useState('Todos');
-  const categories = ['Todos', 'Management', 'Herramientas', 'Habilidades', 'Compliance', 'Análisis'];
-  const filtered = COURSES.filter(c => (cat === 'Todos' || c.category === cat) && c.title.toLowerCase().includes(search.toLowerCase()));
+  const [enrolling, setEnrolling] = useState(null);
+  const [msg, setMsg] = useState('');
+  const { data, loading, refetch } = useApi('/courses/');
+  const courses = data?.results || data || [];
+  const { data: myEnrollments } = useApi('/enrollments/');
+  const enrolledIds = new Set((myEnrollments?.results || myEnrollments || []).map(e => e.course?.id || e.course));
+
+  const filtered = courses.filter(c => c.title?.toLowerCase().includes(search.toLowerCase()));
+
+  const enroll = async (courseId) => {
+    setEnrolling(courseId);
+    try {
+      await api.post('/enrollments/', { course: courseId });
+      setMsg('¡Inscripción exitosa!');
+      refetch();
+    } catch (e) {
+      setMsg(e?.response?.data?.detail || 'Error al inscribirse.');
+    } finally { setEnrolling(null); setTimeout(() => setMsg(''), 3000); }
+  };
 
   return (
-    <div className="scrollable" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(5,31,32,0.5)', border: `1px solid ${C.b1}`, borderRadius: 9, padding: '9px 14px', backdropFilter: 'blur(8px)' }}>
-          <span style={{ color: C.t3 }}>⌕</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar cursos…"
-            aria-label="Buscar cursos"
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: C.t1, fontSize: 13, fontFamily: 'DM Sans' }}
-          />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Search */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 14px' }}>
+          <span style={{ color: C.t3 }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar cursos…" style={{ flex: 1, border: 'none', fontSize: 13, color: C.t1, background: 'none', outline: 'none' }} />
         </div>
-        <Btn variant="ghost">Filtros</Btn>
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {categories.map(c => (
-          <button
-            key={c}
-            onClick={() => setCat(c)}
-            style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${cat === c ? C.accent + '80' : C.b1}`, background: cat === c ? 'rgba(140,183,155,0.15)' : 'transparent', color: cat === c ? C.accentL : C.t2, fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all .15s', boxShadow: cat === c ? `0 0 12px ${C.accent}22` : '' }}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-        {filtered.map(c => (
-          <GlassCard key={c.id} hoverable onClick={() => onNav('my-learning')} style={{ overflow: 'hidden', cursor: 'pointer' }}>
-            <div style={{ height: 90, background: `linear-gradient(135deg, ${C.g2}80, ${C.g1}60)`, borderBottom: `1px solid ${C.b1}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 70% 30%, ${C.accent}20, transparent)` }} />
-              <div style={{ fontSize: 9, color: C.t3, fontFamily: 'DM Mono, monospace', textAlign: 'center', padding: '0 16px', position: 'relative' }}>[ thumbnail: {c.title} ]</div>
-            </div>
-            <div style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                <Badge label={c.category} />
-                <Badge label={c.level} color={C.t2} />
+
+      {msg && <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: C.success }}>{msg}</div>}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {filtered.map(c => {
+            const isEnrolled = enrolledIds.has(c.id);
+            return (
+              <div key={c.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <div style={{ height: 80, background: `${C.accentLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #E2E8F0' }}>
+                  <span style={{ fontSize: 28 }}>📚</span>
+                </div>
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <Badge label={c.category?.name || 'General'} variant="accent" />
+                    {c.level && <Badge label={c.level} variant="default" />}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginBottom: 4, lineHeight: 1.4 }}>{c.title}</div>
+                  <div style={{ fontSize: 11, color: C.t3, marginBottom: 12 }}>{c.instructor_name || 'Instructor'} · {c.duration || '—'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, color: C.warning }}>★ {c.avg_rating?.toFixed(1) || '—'}</span>
+                    {isEnrolled
+                      ? <Badge label="✓ Inscrito" variant="success" />
+                      : <Button size="sm" onClick={() => enroll(c.id)} disabled={enrolling === c.id}>{enrolling === c.id ? '…' : 'Inscribirse'}</Button>}
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 4, lineHeight: 1.4 }}>{c.title}</div>
-              <div style={{ fontSize: 11, color: C.t3, marginBottom: 10 }}>{c.instructor} · {c.duration}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: C.amber }}>★ <span style={{ fontWeight: 700, color: C.t1 }}>{c.rating}</span></span>
-                {c.progress > 0 && (
-                  <span style={{ fontSize: 11, color: c.progress === 100 ? C.teal : C.accent, fontWeight: 600 }}>
-                    {c.progress === 100 ? '✓ Listo' : `${c.progress}%`}
-                  </span>
-                )}
-              </div>
-              {c.progress > 0 && c.progress < 100 && (
-                <div style={{ marginTop: 8 }}><ProgressBar pct={c.progress} color={C.accent} height={3} /></div>
-              )}
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
