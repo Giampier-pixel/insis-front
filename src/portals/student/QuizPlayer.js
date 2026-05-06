@@ -8,8 +8,11 @@ import EmptyState from '@/components/ui/EmptyState';
 import api from '@/lib/api';
 
 export default function QuizPlayer() {
-  const { data, loading } = useApi('/quizzes/');
-  const quizzes = data?.results || data || [];
+  // Quizzes come from enrolled courses — /quizzes/ list doesn't exist on backend
+  const { data: enrollments, loading } = useApi('/enrollments/');
+  const enrolled = enrollments?.results || enrollments || [];
+  // Flatten quizzes from each course's detail (loaded lazily when user picks one)
+  const quizzes = enrolled.flatMap(e => e.course?.quizzes || []);
   const [selected, setSelected] = useState(null);
   const [attempt, setAttempt] = useState(null);
   const [current, setCurrent] = useState(0);
