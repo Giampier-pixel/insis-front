@@ -15,13 +15,11 @@ import api from '@/lib/api';
 
 export default function Employees() {
   const { data: employeesData, loading, refetch } = useApi('/employees/');
-  const { data: companiesData } = useApi('/companies/');
   const employees = employeesData?.results || employeesData || [];
-  const companies = companiesData?.results || companiesData || [];
 
-  // Use first company (HR Manager's company)
-  const company = companies[0];
-  const { data: deptsData } = useApi(company ? `/companies/${company.id}/departments/` : null);
+  // Derive company ID from employee list (HR can't call GET /companies/)
+  const companyId = employees.length > 0 ? employees[0].company : null;
+  const { data: deptsData } = useApi(companyId ? `/companies/${companyId}/departments/` : null);
   const departments = deptsData?.results || deptsData || [];
 
   const [search, setSearch] = useState('');

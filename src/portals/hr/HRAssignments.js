@@ -15,11 +15,15 @@ import api from '@/lib/api';
 export default function Assignments() {
   const { data, loading, refetch } = useApi('/assignments/');
   const { data: coursesData } = useApi('/courses/');
-  const { data: companiesData } = useApi('/companies/');
+  // Get company ID from employees (HR can't list companies, but employees include company)
+  const { data: employeesData } = useApi('/employees/');
+  const employees = employeesData?.results || employeesData || [];
+  const company = employees.length > 0
+    ? { id: employees[0].company, name: employees[0].company_name || 'Mi empresa' }
+    : null;
 
   const assignments = data?.results || data || [];
   const courseList = coursesData?.results || coursesData || [];
-  const company = (companiesData?.results || companiesData || [])[0]; // HR's company
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: '', course: '', scope: 'COMPANY', due_date: '', is_mandatory: false });
