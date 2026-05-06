@@ -2,10 +2,31 @@
 import { C } from '@/lib/palette';
 
 const NAV = {
-  STUDENT:    [{ id:'dashboard',    label:'Dashboard',         icon:'⊞' }, { id:'catalog',      label:'Catálogo de Cursos', icon:'☰' }, { id:'my-learning', label:'Mi Aprendizaje',   icon:'◈' }, { id:'quiz',         label:'Quizzes',            icon:'✎' }, { id:'certificates', label:'Certificados',        icon:'★' }],
-  HR_MANAGER: [{ id:'hr-dashboard', label:'Dashboard',         icon:'⊞' }, { id:'employees',    label:'Empleados',          icon:'◉' }, { id:'assignments',  label:'Asignaciones',       icon:'▤' }, { id:'reports',      label:'Reportes',           icon:'≡' }],
-  INSTRUCTOR: [{ id:'ins-dashboard',label:'Dashboard',         icon:'⊞' }, { id:'ins-courses',  label:'Mis Cursos',         icon:'☰' }, { id:'ins-quiz-stats',label:'Estadísticas Quiz', icon:'≡' }],
-  ADMIN:      [{ id:'hr-dashboard', label:'Dashboard',         icon:'⊞' }, { id:'employees',    label:'Empleados',          icon:'◉' }, { id:'assignments',  label:'Asignaciones',       icon:'▤' }, { id:'reports',      label:'Reportes',           icon:'≡' }],
+  STUDENT:    [
+    { id:'dashboard',     label:'Dashboard',          icon:'⊞' },
+    { id:'catalog',       label:'Catálogo de Cursos', icon:'☰' },
+    { id:'my-learning',   label:'Mi Aprendizaje',     icon:'◈' },
+    { id:'quiz',          label:'Quizzes',             icon:'✎' },
+    { id:'certificates',  label:'Certificados',        icon:'★' },
+  ],
+  HR_MANAGER: [
+    { id:'hr-dashboard',  label:'Dashboard',    icon:'⊞' },
+    { id:'employees',     label:'Empleados',    icon:'◉' },
+    { id:'assignments',   label:'Asignaciones', icon:'▤' },
+    { id:'reports',       label:'Reportes',     icon:'≡' },
+  ],
+  INSTRUCTOR: [
+    { id:'ins-dashboard', label:'Dashboard',          icon:'⊞' },
+    { id:'ins-courses',   label:'Mis Cursos',         icon:'☰' },
+    { id:'ins-quiz-stats',label:'Estadísticas Quiz',  icon:'≡' },
+  ],
+  ADMIN: [
+    { id:'admin-dashboard', label:'Dashboard',  icon:'⊞' },
+    { id:'admin-companies', label:'Empresas',   icon:'🏢' },
+    { id:'admin-users',     label:'Usuarios',   icon:'👥' },
+    { id:'hr-dashboard',    label:'HR View',    icon:'◉' },
+    { id:'reports',         label:'Reportes',   icon:'≡' },
+  ],
 };
 
 export default function Sidebar({ active, onNav, role, userName, onLogout }) {
