@@ -11,6 +11,37 @@ import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import api from '@/lib/api';
 
+function exportToExcel(companies) {
+  import('xlsx').then(XLSX => {
+    // Sheet 1 — companies list
+    const companyRows = companies.map(c => ({
+      'ID':           c.id,
+      'Nombre':       c.name,
+      'RUC':          c.ruc,
+      'Industria':    c.industry || '—',
+      'País':         c.country  || '—',
+      'Ciudad':       c.city     || '—',
+      'Empleados':    c.employee_count   ?? 0,
+      'Departamentos':c.department_count ?? 0,
+      'Creado':       c.created_at ? new Date(c.created_at).toLocaleDateString('es-PE') : '—',
+    }));
+
+    const wb  = XLSX.utils.book_new();
+    const ws  = XLSX.utils.json_to_sheet(companyRows);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 6 }, { wch: 30 }, { wch: 14 }, { wch: 18 },
+      { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 12 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
+
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `INSIS_Empresas_${fecha}.xlsx`);
+  });
+}
+
 export default function AdminCompanies() {
   const { data, loading, refetch } = useApi('/companies/');
   const companies = data?.results || data || [];
@@ -63,7 +94,17 @@ export default function AdminCompanies() {
         <div style={{ fontSize: 13, color: C.t3 }}>
           <span style={{ fontWeight: 600, color: C.t1 }}>{companies.length}</span> empresas registradas
         </div>
-        <Button onClick={() => { setError(''); setShowModal(true); }}>+ Nueva empresa</Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button
+            variant="ghost"
+            onClick={() => exportToExcel(companies)}
+            disabled={companies.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            ↓ Exportar Excel
+          </Button>
+          <Button onClick={() => { setError(''); setShowModal(true); }}>+ Nueva empresa</Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: selectedCompany ? '1fr 1fr' : '1fr', gap: 16 }}>
