@@ -21,8 +21,8 @@ function exportToExcel(companies) {
       'Industria':    c.industry || '—',
       'País':         c.country  || '—',
       'Ciudad':       c.city     || '—',
-      'Empleados':    c.employee_count   ?? 0,
-      'Departamentos':c.department_count ?? 0,
+      'Empleados':    c.employees   ?? 0,
+      'Departamentos':c.departments ?? 0,
       'Creado':       c.created_at ? new Date(c.created_at).toLocaleDateString('es-PE') : '—',
     }));
 
