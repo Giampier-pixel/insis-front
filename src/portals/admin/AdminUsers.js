@@ -13,8 +13,9 @@ import EmptyState from '@/components/ui/EmptyState';
 import api from '@/lib/api';
 
 const ROLE_MAP = {
-  ADMIN:      { variant: 'danger', label: 'Admin' },
-  INSTRUCTOR: { variant: 'info',   label: 'Instructor' },
+  ADMIN:      { variant: 'danger',  label: 'Admin' },
+  INSTRUCTOR: { variant: 'info',    label: 'Instructor' },
+  STUDENT:    { variant: 'success', label: 'Estudiante' },
 };
 
 export default function AdminUsers() {
