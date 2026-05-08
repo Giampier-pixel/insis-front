@@ -24,6 +24,8 @@ export function useAuth() {
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login/', { email, password });
     setTokens(data.access, data.refresh);
+    // Save role from login response (faster than extra /me/ call)
+    if (data.role) localStorage.setItem('user_role', data.role);
     const { data: me } = await api.get('/auth/me/');
     setUser(me);
     localStorage.setItem('user_role', me.role);

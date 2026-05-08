@@ -28,17 +28,17 @@ export default function LoginPage() {
   const [tab, setTab] = useState('login'); // 'login' | 'register'
 
   // Login form
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Register form
-  const [regName, setRegName]       = useState('');
-  const [regEmail, setRegEmail]     = useState('');
-  const [regPass, setRegPass]       = useState('');
-  const [regPass2, setRegPass2]     = useState('');
-  const [regError, setRegError]     = useState('');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPass, setRegPass] = useState('');
+  const [regPass2, setRegPass2] = useState('');
+  const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
   const [regLoading, setRegLoading] = useState(false);
 
@@ -48,10 +48,9 @@ export default function LoginPage() {
     setLoginLoading(true); setLoginError('');
     try {
       const me = await login(email, password);
-      if (me.role === 'ADMIN')        router.replace('/dashboard?portal=admin');
-      else if (me.role === 'INSTRUCTOR')   router.replace('/dashboard?portal=instructor');
-      else if (me.role === 'HR_MANAGER')   router.replace('/dashboard?portal=hr');
-      else                                 router.replace('/dashboard?portal=student');
+      if (me.role === 'ADMIN') router.replace('/dashboard?portal=admin');
+      else if (me.role === 'INSTRUCTOR') router.replace('/dashboard?portal=instructor');
+      else router.replace('/dashboard?portal=student');
     } catch (err) {
       setLoginError(err?.response?.data?.detail || 'Credenciales incorrectas.');
     } finally { setLoginLoading(false); }
@@ -60,8 +59,8 @@ export default function LoginPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!regName || !regEmail || !regPass) { setRegError('Todos los campos son requeridos.'); return; }
-    if (regPass !== regPass2)               { setRegError('Las contraseñas no coinciden.'); return; }
-    if (regPass.length < 8)                 { setRegError('La contraseña debe tener al menos 8 caracteres.'); return; }
+    if (regPass !== regPass2) { setRegError('Las contraseñas no coinciden.'); return; }
+    if (regPass.length < 8) { setRegError('La contraseña debe tener al menos 8 caracteres.'); return; }
     setRegLoading(true); setRegError(''); setRegSuccess('');
     try {
       await api.post('/auth/register/', { full_name: regName, email: regEmail, password: regPass });
@@ -86,7 +85,7 @@ export default function LoginPage() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', margin: '0 44px' }}>
-          {[['login','Iniciar sesión'], ['register','Registrarse']].map(([id, label]) => (
+          {[['login', 'Iniciar sesión'], ['register', 'Registrarse']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{
               flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 600,
               color: tab === id ? C.accent : C.t3,
@@ -133,9 +132,6 @@ export default function LoginPage() {
           {/* ── REGISTER ── */}
           {tab === 'register' && (
             <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: '#F0F7F4', border: '1px solid #A7D4C0', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: C.accent }}>
-                ℹ️ Las cuentas creadas aquí son de tipo <strong>Estudiante</strong>. Para otros roles, contacta al administrador.
-              </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 5 }}>Nombre completo *</label>
                 <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="Ana García" required
@@ -156,7 +152,7 @@ export default function LoginPage() {
                 <input type="password" value={regPass2} onChange={e => setRegPass2(e.target.value)} placeholder="Repite la contraseña" required
                   style={inputStyle(!!regError)} onFocus={onFocusStyle} onBlur={onBlurStyle} />
               </div>
-              {regError   && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: C.danger }}>{regError}</div>}
+              {regError && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: C.danger }}>{regError}</div>}
               {regSuccess && <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: C.success }}>{regSuccess}</div>}
               <button type="submit" disabled={regLoading} style={{
                 width: '100%', padding: '12px', borderRadius: 8, marginTop: 4,

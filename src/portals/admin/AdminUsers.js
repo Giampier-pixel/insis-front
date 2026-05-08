@@ -12,70 +12,67 @@ import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import api from '@/lib/api';
 
-const ROLE_COLORS = {
-  ADMIN:      { variant: 'danger',  label: 'Admin' },
-  INSTRUCTOR: { variant: 'info',    label: 'Instructor' },
-  HR_MANAGER: { variant: 'warning', label: 'HR Manager' },
-  STUDENT:    { variant: 'success', label: 'Estudiante' },
-  SUPPORT:    { variant: 'default', label: 'Soporte' },
+const ROLE_MAP = {
+  ADMIN:      { variant: 'danger', label: 'Admin' },
+  INSTRUCTOR: { variant: 'info',   label: 'Instructor' },
 };
 
 export default function AdminUsers() {
-  const { data, loading, refetch } = useApi('/employees/');
-  const { data: companiesData } = useApi('/companies/');
-  const employees = data?.results || data || [];
-  const companies = companiesData?.results || companiesData || [];
+  const { data, loading, refetch } = useApi('/auth/users/');
+  const users = data?.results || data || [];
 
   const [search, setSearch]       = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'STUDENT', company: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
-  const [success, setSuccess] = useState('');
+  const [editUser, setEditUser]   = useState(null);
+  const [form, setForm]           = useState({ full_name: '', email: '', password: '', role: 'INSTRUCTOR', is_active: true });
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const filtered = employees.filter(e =>
-    (e.user?.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (e.user?.email || '').toLowerCase().includes(search.toLowerCase()) ||
-    (e.user?.role || '').toLowerCase().includes(search.toLowerCase())
+  const filtered = users.filter(u =>
+    u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase()) ||
+    u.role?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const createUser = async () => {
-    if (!form.full_name || !form.email || !form.password) {
-      setError('Nombre, email y contraseña son requeridos.'); return;
-    }
-    setSaving(true); setError(''); setSuccess('');
+  const openCreate = () => {
+    setEditUser(null);
+    setForm({ full_name: '', email: '', password: '', role: 'INSTRUCTOR', is_active: true });
+    setError('');
+    setShowModal(true);
+  };
+
+  const openEdit = (u) => {
+    setEditUser(u);
+    setForm({ full_name: u.full_name, email: u.email, password: '', role: u.role, is_active: u.is_active });
+    setError('');
+    setShowModal(true);
+  };
+
+  const save = async () => {
+    if (!form.full_name || !form.email) { setError('Nombre y email son requeridos.'); return; }
+    if (!editUser && !form.password) { setError('La contraseña es requerida.'); return; }
+    setSaving(true); setError('');
     try {
-      // Step 1: Register user (creates as STUDENT by default)
-      await api.post('/auth/register/', {
-        full_name: form.full_name,
-        email: form.email,
-        password: form.password,
-      });
-
-      // Step 2: If company selected, create employee record
-      if (form.company) {
-        await api.post('/employees/', {
-          full_name: form.full_name,
-          email: form.email,
-          is_hr_manager: form.role === 'HR_MANAGER',
-          company: parseInt(form.company),
-        });
+      const payload = { full_name: form.full_name, email: form.email, role: form.role, is_active: form.is_active };
+      if (form.password) payload.password = form.password;
+      if (editUser) {
+        await api.patch(`/auth/users/${editUser.id}/`, payload);
+      } else {
+        await api.post('/auth/users/', { ...payload, password: form.password });
       }
-
-      setSuccess(`Usuario ${form.email} creado correctamente como ${ROLE_COLORS[form.role]?.label || form.role}.`);
-      setForm({ full_name: '', email: '', password: '', role: 'STUDENT', company: '' });
+      setShowModal(false);
       refetch();
-      setTimeout(() => { setShowModal(false); setSuccess(''); }, 2000);
     } catch (e) {
       const d = e?.response?.data;
-      setError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Error al crear usuario.');
+      setError(typeof d === 'object' ? Object.values(d).flat().join(' ') : 'Error al guardar.');
     } finally { setSaving(false); }
   };
 
-  const companyOptions = [
-    { value: '', label: 'Sin empresa asignada' },
-    ...companies.map(c => ({ value: String(c.id), label: c.name })),
-  ];
+  const deleteUser = async (id) => {
+    try { await api.delete(`/auth/users/${id}/`); refetch(); } catch { alert('Error al eliminar.'); }
+    setConfirmDelete(null);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -85,12 +82,12 @@ export default function AdminUsers() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, email o rol…"
             style={{ flex: 1, border: 'none', fontSize: 13, color: C.t1, background: 'none', outline: 'none' }} />
         </div>
-        <Button onClick={() => { setError(''); setSuccess(''); setShowModal(true); }}>+ Nuevo usuario</Button>
+        <Button onClick={openCreate}>+ Nuevo usuario</Button>
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr' }}>
-          {['Usuario', 'Rol', 'Empresa', 'Departamento'].map(h => (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr' }}>
+          {['Usuario', 'Email', 'Rol', 'Acciones'].map(h => (
             <div key={h} style={{ padding: '11px 16px', fontSize: 11, color: C.t3, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #F1F5F9' }}>{h}</div>
           ))}
         </div>
@@ -98,58 +95,59 @@ export default function AdminUsers() {
           <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
         ) : filtered.length === 0 ? (
           <EmptyState title="Sin usuarios" message="No hay usuarios que coincidan." />
-        ) : filtered.map(e => {
-          const role = e.user?.role || 'STUDENT';
-          const rb = ROLE_COLORS[role] || ROLE_COLORS.STUDENT;
+        ) : filtered.map((u, i) => {
+          const rb = ROLE_MAP[u.role] || { variant: 'default', label: u.role };
           return (
-            <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', borderBottom: '1px solid #F1F5F9', transition: 'background .12s' }}
-              onMouseEnter={ev => ev.currentTarget.style.background = '#FAFAFA'}
-              onMouseLeave={ev => ev.currentTarget.style.background = '#fff'}>
+            <div key={u.id}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr', borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', transition: 'background .12s' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#FAFAFA'}
+              onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+            >
               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar name={e.user?.full_name || e.user?.email || '?'} size={30} color={C.accent} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{e.user?.full_name || '—'}</div>
-                  <div style={{ fontSize: 11, color: C.t3 }}>{e.user?.email}</div>
-                </div>
+                <Avatar name={u.full_name || u.email} size={30} color={C.accent} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: u.is_active ? C.t1 : C.t3 }}>{u.full_name || '—'}</div>
               </div>
+              <div style={{ padding: '12px 16px', fontSize: 13, color: C.t2, display: 'flex', alignItems: 'center' }}>{u.email}</div>
               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
                 <Badge label={rb.label} variant={rb.variant} />
               </div>
-              <div style={{ padding: '12px 16px', fontSize: 13, color: C.t2, display: 'flex', alignItems: 'center' }}>
-                {e.company_name || '—'}
-              </div>
-              <div style={{ padding: '12px 16px', fontSize: 13, color: C.t2, display: 'flex', alignItems: 'center' }}>
-                {e.department_name || '—'}
+              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>Editar</Button>
+                <Button variant="danger" size="sm" onClick={() => setConfirmDelete(u)}>×</Button>
               </div>
             </div>
           );
         })}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Nuevo usuario">
+      {/* Create/Edit modal */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editUser ? 'Editar usuario' : 'Nuevo usuario'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Nombre completo *" value={form.full_name} onChange={v => setForm({ ...form, full_name: v })} placeholder="Ana García" required />
-          <Input label="Email *" value={form.email} onChange={v => setForm({ ...form, email: v })} type="email" placeholder="ana@empresa.com" required />
-          <Input label="Contraseña *" value={form.password} onChange={v => setForm({ ...form, password: v })} type="password" placeholder="Mínimo 8 caracteres" required />
-          <Select label="Rol" value={form.role} onChange={v => setForm({ ...form, role: v })}
+          <Input label="Nombre completo *" value={form.full_name} onChange={v => setForm(f => ({ ...f, full_name: v }))} placeholder="Ana García" />
+          <Input label="Email *" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" placeholder="ana@insis.com" />
+          <Input label={editUser ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña *'} value={form.password} onChange={v => setForm(f => ({ ...f, password: v }))} type="password" placeholder="Mínimo 8 caracteres" />
+          <Select label="Rol" value={form.role} onChange={v => setForm(f => ({ ...f, role: v }))}
             options={[
-              { value: 'STUDENT',    label: 'Estudiante' },
               { value: 'INSTRUCTOR', label: 'Instructor' },
-              { value: 'HR_MANAGER', label: 'HR Manager' },
               { value: 'ADMIN',      label: 'Admin' },
             ]} />
-          {companies.length > 0 && (
-            <Select label="Empresa (opcional)" value={form.company} onChange={v => setForm({ ...form, company: v })}
-              options={companyOptions} />
-          )}
-          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400E' }}>
-            ⚠️ El usuario se crea como <strong>Estudiante</strong> en el sistema de autenticación. Para roles de Instructor, HR Manager o Admin, coordina con el equipo técnico.
-          </div>
-          {error   && <div style={{ fontSize: 12, color: C.danger,  background: '#FEF2F2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
-          {success && <div style={{ fontSize: 12, color: C.success, background: '#ECFDF5', padding: '8px 12px', borderRadius: 6 }}>{success}</div>}
+          {error && <div style={{ fontSize: 12, color: C.danger, background: '#FEF2F2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button onClick={createUser} disabled={saving}>{saving ? 'Creando…' : 'Crear usuario'}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Guardando…' : editUser ? 'Guardar' : 'Crear'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Confirmar eliminación">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 14, color: C.t1 }}>
+            ¿Eliminar al usuario <strong>{confirmDelete?.full_name || confirmDelete?.email}</strong>? Esta acción no se puede deshacer.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+            <Button variant="danger" onClick={() => deleteUser(confirmDelete.id)}>Eliminar</Button>
           </div>
         </div>
       </Modal>

@@ -2,30 +2,19 @@
 import { C } from '@/lib/palette';
 
 const NAV = {
-  STUDENT:    [
-    { id:'dashboard',     label:'Dashboard',          icon:'⊞' },
-    { id:'catalog',       label:'Catálogo de Cursos', icon:'☰' },
-    { id:'my-learning',   label:'Mi Aprendizaje',     icon:'◈' },
-    { id:'quiz',          label:'Quizzes',             icon:'✎' },
-    { id:'certificates',  label:'Certificados',        icon:'★' },
-  ],
-  HR_MANAGER: [
-    { id:'hr-dashboard',  label:'Dashboard',    icon:'⊞' },
-    { id:'employees',     label:'Empleados',    icon:'◉' },
-    { id:'assignments',   label:'Asignaciones', icon:'▤' },
-    { id:'reports',       label:'Reportes',     icon:'≡' },
+  STUDENT: [
+    { id: 'catalog',      label: 'Catálogo de Cursos' },
+    { id: 'certificates', label: 'Mis Certificados' },
   ],
   INSTRUCTOR: [
-    { id:'ins-dashboard', label:'Dashboard',          icon:'⊞' },
-    { id:'ins-courses',   label:'Mis Cursos',         icon:'☰' },
-    { id:'ins-quiz-stats',label:'Estadísticas Quiz',  icon:'≡' },
+    { id: 'ins-courses',   label: 'Mis Cursos' },
+    { id: 'ins-students',  label: 'Estudiantes' },
   ],
   ADMIN: [
-    { id:'admin-dashboard', label:'Dashboard',  icon:'⊞' },
-    { id:'admin-companies', label:'Empresas',   icon:'🏢' },
-    { id:'admin-users',     label:'Usuarios',   icon:'👥' },
-    { id:'hr-dashboard',    label:'HR View',    icon:'◉' },
-    { id:'reports',         label:'Reportes',   icon:'≡' },
+    { id: 'admin-dashboard', label: 'Dashboard' },
+    { id: 'admin-users',     label: 'Gestión de Usuarios' },
+    { id: 'admin-courses',   label: 'Gestión de Cursos' },
+    { id: 'admin-report',    label: 'Reportes' },
   ],
 };
 
@@ -42,13 +31,13 @@ export default function Sidebar({ active, onNav, role, userName, onLogout }) {
       {/* Nav */}
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
         {items.map(item => {
-          const isActive = active === item.id;
+          const isActive = active === item.id || (active && active.startsWith(item.id + '-'));
           return (
-            <button key={item.id} onClick={() => onNav(item.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 8, marginBottom: 2, background: isActive ? C.accentLight : 'transparent', color: isActive ? C.accent : C.t2, fontSize: 13, fontWeight: isActive ? 600 : 400, transition: 'all .15s', textAlign: 'left' }}
+            <button key={item.id} onClick={() => onNav(item.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', borderRadius: 8, marginBottom: 2, background: isActive ? C.accentLight : 'transparent', color: isActive ? C.accent : C.t2, fontSize: 13, fontWeight: isActive ? 600 : 400, transition: 'all .15s', textAlign: 'left', border: 'none', cursor: 'pointer' }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F8FAFC'; }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             >
-              <span style={{ fontSize: 14, width: 18, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
               {item.label}
             </button>
           );
@@ -66,7 +55,8 @@ export default function Sidebar({ active, onNav, role, userName, onLogout }) {
             <div style={{ fontSize: 10, color: C.t3 }}>{role}</div>
           </div>
         </div>
-        <button onClick={onLogout} style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #E2E8F0', color: C.t3, fontSize: 12, background: '#fff', transition: 'all .15s' }}
+        <button onClick={onLogout}
+          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #E2E8F0', color: C.t3, fontSize: 12, background: '#fff', transition: 'all .15s', cursor: 'pointer' }}
           onMouseEnter={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = C.danger; e.currentTarget.style.borderColor = '#FECACA'; }}
           onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = C.t3; e.currentTarget.style.borderColor = '#E2E8F0'; }}
         >
